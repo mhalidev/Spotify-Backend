@@ -27,12 +27,22 @@ async function register(req, res) {
             role
         });
 
-        const token = await jwt.sign({
+        const access_token = await jwt.sign({
             id: newUser._id,
             role: newUser.role,
-        }, config.JWT_SECRET);
+        }, config.JWT_SECRET_ACCESS,{
+            expiresIn: '1m',
+        });
 
-        res.cookie('token', token);
+        const refresh_token = await jwt.sign({
+            id: newUser._id,
+            role: newUser._id,
+        }, config.JWT_SECRET_REFRESH,{
+            expiresIn: '7d',
+        })
+
+        res.cookie("reftoken", refresh_token);
+        res.cookie("acctoken", access_token);
 
         res.status(201).json({ message: 'User registered successfully', username, email, role });
     }
@@ -62,12 +72,22 @@ async function login(req, res) {
             return res.status(400).json({ message: 'Invalid Password' });
         }
 
-        const token = await jwt.sign({
+        const access_token = await jwt.sign({
             id: verifyuser._id,
             role: verifyuser.role,
-        }, config.JWT_SECRET);
+        }, config.JWT_SECRET_ACCESS, {
+            expiresIn: "1m",
+        });
 
-        res.cookie('token', token);
+        const refresh_token = await jwt.sign({
+            id: verifyuser._id,
+            role: verifyuser._id,
+        }, config.JWT_SECRET_REFRESH, {
+            expiresIn: "7d",
+        })
+
+        res.cookie("reftoken", refresh_token);
+        res.cookie("acctoken", access_token);
 
         res.status(200).json({ message: 'Login successful', username: verifyuser.username, email: verifyuser.email, role: verifyuser.role });
     }
@@ -81,4 +101,26 @@ async function logout(req, res) {
     res.status(200).json({ message: 'Logged out successfully' });
 }
 
-module.exports = { register, login, logout };
+async function refresh(req, res){
+    const refresh_token = req.cookies.reftoken;
+
+    if(!refresh_token){
+        return res.status(400).json({message: "no refresh token"});
+    }
+
+    const decode = jwt.verify(refresh_token, config.JWT_SECRET_REFRESH);
+
+    const access_token = jwt.sign({
+        id : decode._id
+    }, config.JWT_SECRET_ACCESS,{
+        expiresIn: '1m',
+    });
+
+    res.cookie("acctoken", access_token);
+
+    res.status(201).json({
+        access_token,
+    });
+}
+
+module.exports = { register, login, logout, refresh };

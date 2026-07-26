@@ -2,15 +2,12 @@ const jwt = require("jsonwebtoken");
 const config = require("../config/config");
 
 const authartistMiddleware = (req, res, next) => {
-    const token = req.cookies.token;
+    const token = req.cookies.acctoken;
     if (!token) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
     try {
-        const decode = jwt.verify(token, process.env.JWT_SECRET);
-        if (!decode) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
+        const decode = jwt.verify(token, process.env.JWT_SECRET_ACCESS);
         if (decode.role !== "artist") {
             return res.status(403).json({ message: 'you are not an artist' });
         }
@@ -22,17 +19,14 @@ const authartistMiddleware = (req, res, next) => {
 };
 
 const authuserMiddleware = (req, res, next) => {
-    const token = req.cookies.token;
+    const token = req.cookies.acctoken;
     if (!token) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
     try {
-        const decode = jwt.verify(token, config.JWT_SECRET);
-        if (!decode) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-        if (decode.role !== "user") {
-            return res.status(403).json({ message: 'you are not a user' });
+        const decode = jwt.verify(token, config.JWT_SECRET_ACCESS);
+        if (decode.role == "user" || decode.role == "artist") {
+            return res.status(403).json({ message: 'you dont belong there' });
         }
         req.user = decode;
         next();
