@@ -9,5 +9,6 @@ router.post('/login', validationMiddleware.validateLogin, authController.login);
 router.post('/logout', authMiddleware.authuserMiddleware, authController.logout);
 router.post('/refresh', authController.refresh);
 router.post('/all-logout', authController.allLogout);
+router.post('/verify-otp', authController.verifyOtp);
 
 module.exports = router;

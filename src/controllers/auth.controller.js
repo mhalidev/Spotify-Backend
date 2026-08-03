@@ -4,6 +4,9 @@ const config = require('../config/config');
 const bcrypt = require('bcryptjs');
 const SessionModel = require('../models/session.model');
 const crypto = require('crypto');
+const { generateOtp } = require('../utils/utils');
+const OtpModel = require('../models/otp.model');
+const { sendEmail } = require('../services/gmail.service');
 
 async function register(req, res) {
     try {
@@ -20,56 +23,32 @@ async function register(req, res) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        const HashedPassword = await bcrypt.hash(password, 10); 
+        const HashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = await usermodel.create({
             username,
             email,
             password: HashedPassword,
-            role
+            role,
+            verified: false,
         });
 
-        const refresh_token = await jwt.sign({
-            id: newUser._id,
-            role: newUser._id,
-        }, config.JWT_SECRET_REFRESH, {
-            expiresIn: '7d',
-        })
+        const otp = generateOtp();
 
-        const hashedRefreshToken = await crypto.createHash('sha256').update(refresh_token).digest('hex');
+        const otpHash = await crypto.createHash('sha256').update(otp).digest('hex');
 
-        const session = await SessionModel.create({
-            userId: newUser._id,
-            refreshToken: hashedRefreshToken,
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
+        const otpModel = await OtpModel.create({
+            email: email,
+            user: newUser._id,
+            otp: otpHash,
         });
 
-        const access_token = await jwt.sign({
-            id: newUser._id,
-            role: newUser.role,
-            sessionId: session._id,
-        }, config.JWT_SECRET_ACCESS, {
-            expiresIn: '15m',
-        });
-
-
-        res.cookie("reftoken", refresh_token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-        res.cookie("acctoken", access_token, {    
-            httpOnly: true,
-            secure: true,
-            sameSite: 'strict',
-            maxAge: 15 * 60 * 1000,
-        });
+        await sendEmail(email, 'OTP Verification', `Your OTP is ${otp}`);
 
         res.status(201).json({ message: 'User registered successfully', username, email, role });
     }
     catch (error) {
+        console.log(error);
         res.status(500).json({ message: 'Error registering user', error: error.message });
     }
 }
@@ -221,7 +200,7 @@ async function allLogout(req, res) {
     await SessionModel.updateMany({
         userId: decode.id,
         revoked: false,
-    },{
+    }, {
         revoked: true,
     });
     res.clearCookie("reftoken");
@@ -229,4 +208,23 @@ async function allLogout(req, res) {
     res.status(200).json({ message: 'All logged out successfully' });
 }
 
-module.exports = { register, login, logout, refresh, allLogout };
+async function verifyOtp(req, res) {
+    try {
+        const { email, otp } = req.body;
+
+        const otpHash = await crypto.createHash('sha256').update(otp).digest('hex');
+
+        const otpsend = await OtpModel.findOne({ email: email, otp: otpHash });
+        if (!otpsend) {
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+        const user = await usermodel.findByIdAndUpdate(otpsend.user, { verified: true });
+        await OtpModel.deleteMany({ user: user._id });
+        res.status(200).json({ message: 'OTP verified successfully', user: user });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error verifying OTP', error: error.message });
+    }
+}
+
+module.exports = { register, login, logout, refresh, allLogout, verifyOtp };

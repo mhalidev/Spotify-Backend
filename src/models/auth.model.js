@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "artist"],
     default: "user",
   },
+  verified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const User = mongoose.model("users", userSchema);
