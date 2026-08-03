@@ -25,13 +25,10 @@ const authuserMiddleware = (req, res, next) => {
     }
     try {
         const decode = jwt.verify(token, config.JWT_SECRET_ACCESS);
-        if (decode.role == "user" || decode.role == "artist") {
-            return res.status(403).json({ message: 'you dont belong there' });
-        }
         req.user = decode;
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return res.status(401).json({ message: 'Unauthorized', error: error.message });
     }
 };
 
