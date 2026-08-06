@@ -1,0 +1,235 @@
+{
+  "info": {
+    "name": "Spotify Backend",
+    "description": "API collection for the Spotify-Backend project (Node.js/Express + MongoDB). Covers auth (register, OTP verification, login, refresh, logout) and music/album management.\n\nBefore recording: set the `baseUrl` variable, and make sure 'Automatically follow redirects' and cookie jar are enabled in Postman so the acctoken/reftoken cookies persist between requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "b6e2f0a0-1c2e-4b8a-9e7e-8f3a2d1c4e5f"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "demo.artist@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "DemoPass123!",
+      "type": "string"
+    },
+    {
+      "key": "musicId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "albumId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"demoartist\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"role\": \"artist\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Creates a new account (role: user or artist). Sends an OTP to the given email."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"otp\": \"REPLACE_WITH_OTP_FROM_EMAIL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "verify-otp"]
+            },
+            "description": "Confirms the OTP emailed at registration and marks the account as verified."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticates and sets 'acctoken' (15 min) and 'reftoken' (7 day) httpOnly cookies. Postman's cookie jar will store these automatically for subsequent requests."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Uses the 'reftoken' cookie to issue a rotated access/refresh token pair. No body needed — cookie is sent automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout (current session)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Revokes the current session only (requires the acctoken cookie)."
+          },
+          "response": []
+        },
+        {
+          "name": "All Logout (all sessions)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{baseUrl}}/auth/all-logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "all-logout"]
+            },
+            "description": "Revokes every active session for the user and clears both cookies."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Music",
+      "item": [
+        {
+          "name": "Create Music (artist only)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Demo Track", "type": "text" },
+                { "key": "music", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music/create-music",
+              "host": ["{{baseUrl}}"],
+              "path": ["music", "create-music"]
+            },
+            "description": "Requires an artist-role logged-in session. Attach an audio file to the 'music' field before sending — this is the best visual moment for the demo (show the file landing in ImageKit right after)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Album (artist only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Demo Album\",\n  \"musics\": [\"{{musicId}}\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/music/create-album",
+              "host": ["{{baseUrl}}"],
+              "path": ["music", "create-album"]
+            },
+            "description": "Requires an artist-role logged-in session. Pass one or more track IDs (from Create Music responses) in 'musics'."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Musics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music/get-all-musics",
+              "host": ["{{baseUrl}}"],
+              "path": ["music", "get-all-musics"]
+            },
+            "description": "Requires a logged-in session (user or artist). Returns up to 5 tracks with artist populated."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Albums",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music/get-all-albums",
+              "host": ["{{baseUrl}}"],
+              "path": ["music", "get-all-albums"]
+            },
+            "description": "Requires a logged-in session. Returns up to 5 albums with artist populated."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Album By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/music/get-album/{{albumId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["music", "get-album", "{{albumId}}"]
+            },
+            "description": "Requires a logged-in session. Set the 'albumId' collection variable to an album _id from a previous response — returns the album with its tracks populated."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
