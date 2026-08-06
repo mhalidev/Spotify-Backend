@@ -64,6 +64,10 @@ async function login(req, res) {
             ]
         });
 
+        if (verifyuser.verified == false) {
+            return res.status(400).json({ message: 'user not verified' });
+        }
+
         if (!verifyuser) {
             return res.status(400).json({ message: 'User not found' });
         }
@@ -76,7 +80,7 @@ async function login(req, res) {
 
         const refresh_token = await jwt.sign({
             id: verifyuser._id,
-            role: verifyuser._id,
+            role: verifyuser.role,
         }, config.JWT_SECRET_REFRESH, {
             expiresIn: "7d",
         })
@@ -155,15 +159,15 @@ async function refresh(req, res) {
     }
 
     const access_token = jwt.sign({
-        id: decode._id,
+        id: decode.id,
         role: decode.role,
         sessionId: session._id,
     }, config.JWT_SECRET_ACCESS, {
-        expiresIn: '1m',
+        expiresIn: '15m',
     });
 
     const new_refresh_token = await jwt.sign({
-        id: decode._id,
+        id: decode.id,
         role: decode.role,
     }, config.JWT_SECRET_REFRESH, {
         expiresIn: '7d',
@@ -205,7 +209,7 @@ async function allLogout(req, res) {
     });
     res.clearCookie("reftoken");
     res.clearCookie("acctoken");
-    res.status(200).json({ message: 'All logged out successfully' });
+    res.status(200).json({ message: 'Logout from all devices successful' })
 }
 
 async function verifyOtp(req, res) {
